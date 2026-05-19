@@ -1,8 +1,7 @@
 """Tests for codechu_xdg — XDG path resolution + migration."""
+
 from __future__ import annotations
 
-import os
-from pathlib import Path
 
 import pytest
 
@@ -37,7 +36,9 @@ def test_xdg_env_override(monkeypatch, tmp_path):
     custom = tmp_path / "custom_config"
     monkeypatch.setenv("XDG_CONFIG_HOME", str(custom))
     # Reimport to pick up env
-    import importlib, codechu_xdg
+    import importlib
+    import codechu_xdg
+
     importlib.reload(codechu_xdg)
     app = codechu_xdg.App("v", "p")
     assert str(app.config_dir).startswith(str(custom))
@@ -68,11 +69,13 @@ def test_slash_rejected():
 
 def test_ensure_creates_all_dirs(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "c"))
-    monkeypatch.setenv("XDG_CACHE_HOME",  str(tmp_path / "ca"))
-    monkeypatch.setenv("XDG_DATA_HOME",   str(tmp_path / "d"))
-    monkeypatch.setenv("XDG_STATE_HOME",  str(tmp_path / "s"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "ca"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "d"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "s"))
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "r"))
-    import importlib, codechu_xdg
+    import importlib
+    import codechu_xdg
+
     importlib.reload(codechu_xdg)
 
     app = codechu_xdg.App("v", "p")
@@ -84,11 +87,13 @@ def test_ensure_creates_all_dirs(tmp_path, monkeypatch):
 
 def test_ensure_idempotent(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "c"))
-    monkeypatch.setenv("XDG_CACHE_HOME",  str(tmp_path / "ca"))
-    monkeypatch.setenv("XDG_DATA_HOME",   str(tmp_path / "d"))
-    monkeypatch.setenv("XDG_STATE_HOME",  str(tmp_path / "s"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "ca"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "d"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "s"))
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "r"))
-    import importlib, codechu_xdg
+    import importlib
+    import codechu_xdg
+
     importlib.reload(codechu_xdg)
 
     app = codechu_xdg.App("v", "p")
@@ -102,11 +107,13 @@ def test_ensure_idempotent(tmp_path, monkeypatch):
 
 def test_migrate_moves_existing(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "c"))
-    monkeypatch.setenv("XDG_CACHE_HOME",  str(tmp_path / "ca"))
-    monkeypatch.setenv("XDG_DATA_HOME",   str(tmp_path / "d"))
-    monkeypatch.setenv("XDG_STATE_HOME",  str(tmp_path / "s"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "ca"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "d"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "s"))
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "r"))
-    import importlib, codechu_xdg
+    import importlib
+    import codechu_xdg
+
     importlib.reload(codechu_xdg)
 
     app = codechu_xdg.App("v", "p")
@@ -125,7 +132,9 @@ def test_migrate_moves_existing(tmp_path, monkeypatch):
 
 def test_migrate_skips_when_new_exists(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "c"))
-    import importlib, codechu_xdg
+    import importlib
+    import codechu_xdg
+
     importlib.reload(codechu_xdg)
 
     app = codechu_xdg.App("v", "p")
@@ -143,7 +152,9 @@ def test_migrate_skips_when_new_exists(tmp_path, monkeypatch):
 
 def test_migrate_skips_when_legacy_missing(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "c"))
-    import importlib, codechu_xdg
+    import importlib
+    import codechu_xdg
+
     importlib.reload(codechu_xdg)
 
     app = codechu_xdg.App("v", "p")
@@ -166,7 +177,9 @@ def test_repr():
 
 def test_settings_file_default_name(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
-    import importlib, codechu_xdg
+    import importlib
+    import codechu_xdg
+
     importlib.reload(codechu_xdg)
     app = codechu_xdg.App("v", "p")
     assert app.settings_file().name == "settings.json"
@@ -175,11 +188,13 @@ def test_settings_file_default_name(tmp_path, monkeypatch):
 
 def test_file_helpers_return_correct_subdir(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "c"))
-    monkeypatch.setenv("XDG_CACHE_HOME",  str(tmp_path / "ca"))
-    monkeypatch.setenv("XDG_DATA_HOME",   str(tmp_path / "d"))
-    monkeypatch.setenv("XDG_STATE_HOME",  str(tmp_path / "s"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "ca"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "d"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "s"))
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "r"))
-    import importlib, codechu_xdg
+    import importlib
+    import codechu_xdg
+
     importlib.reload(codechu_xdg)
 
     app = codechu_xdg.App("v", "p")
@@ -195,7 +210,9 @@ def test_file_helpers_return_correct_subdir(tmp_path, monkeypatch):
 
 def test_remove_cache_clears_contents(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
-    import importlib, codechu_xdg
+    import importlib
+    import codechu_xdg
+
     importlib.reload(codechu_xdg)
 
     app = codechu_xdg.App("v", "p")
@@ -216,7 +233,9 @@ def test_remove_cache_clears_contents(tmp_path, monkeypatch):
 
 def test_remove_runtime_clears_sockets(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "rt"))
-    import importlib, codechu_xdg
+    import importlib
+    import codechu_xdg
+
     importlib.reload(codechu_xdg)
 
     app = codechu_xdg.App("v", "p")
@@ -232,6 +251,7 @@ def test_remove_runtime_clears_sockets(tmp_path, monkeypatch):
 def test_remove_on_nonexistent_dir():
     """Wiping a non-existent dir returns 0, doesn't crash."""
     import codechu_xdg
+
     app = codechu_xdg.App("nonexistent-vendor-zzz", "nonexistent-prod-zzz")
     # Cache_dir doesn't exist — should not raise
     assert app.remove_cache() == 0

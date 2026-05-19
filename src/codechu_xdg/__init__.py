@@ -26,6 +26,7 @@ Migration::
     })
     print(f"migrated {moved} files")
 """
+
 from __future__ import annotations
 
 import os
@@ -54,12 +55,10 @@ def _xdg(env: str, default: str) -> Path:
 
 
 XDG_CONFIG_HOME: Path = _xdg("XDG_CONFIG_HOME", ".config")
-XDG_CACHE_HOME:  Path = _xdg("XDG_CACHE_HOME",  ".cache")
-XDG_DATA_HOME:   Path = _xdg("XDG_DATA_HOME",   ".local/share")
-XDG_STATE_HOME:  Path = _xdg("XDG_STATE_HOME",  ".local/state")
-XDG_RUNTIME_DIR: Path = Path(
-    os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
-)
+XDG_CACHE_HOME: Path = _xdg("XDG_CACHE_HOME", ".cache")
+XDG_DATA_HOME: Path = _xdg("XDG_DATA_HOME", ".local/share")
+XDG_STATE_HOME: Path = _xdg("XDG_STATE_HOME", ".local/state")
+XDG_RUNTIME_DIR: Path = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}")
 
 
 @dataclass(frozen=True)
@@ -110,8 +109,7 @@ class App:
 
     def ensure(self) -> None:
         """Create all five directories if missing (mkdir -p semantics)."""
-        for d in (self.config_dir, self.cache_dir, self.data_dir,
-                  self.state_dir, self.runtime_dir):
+        for d in (self.config_dir, self.cache_dir, self.data_dir, self.state_dir, self.runtime_dir):
             d.mkdir(parents=True, exist_ok=True)
 
     def migrate(self, mapping: dict[Path, Path]) -> int:
