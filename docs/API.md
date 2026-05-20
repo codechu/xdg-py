@@ -1,4 +1,4 @@
-# API Reference — codechu-xdg 0.2.0
+# API Reference — codechu-xdg 0.3.0
 
 Vendor-namespaced [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/)
 paths for Linux desktop apps. Stdlib-only, ~80 LOC, no ambient reads.
@@ -44,6 +44,8 @@ Every path is `<XDG base>/<vendor>/<product>/`.
 | `data_dir` | `$XDG_DATA_HOME/<vendor>/<product>` | Persistent user data |
 | `state_dir` | `$XDG_STATE_HOME/<vendor>/<product>` | Logs, history, recovery |
 | `runtime_dir` | `$XDG_RUNTIME_DIR/<vendor>/<product>` | Sockets, pid files, locks |
+| `data_dirs` | `[<base>/<vendor>/<product> for base in $XDG_DATA_DIRS]` | System data dirs (read-only, search) |
+| `config_dirs` | `[<base>/<vendor>/<product> for base in $XDG_CONFIG_DIRS]` | System config dirs (read-only, search) |
 
 All properties return `pathlib.Path`. They do not create directories —
 call [`ensure()`](#ensure) for that.
@@ -76,6 +78,19 @@ Swallows individual `OSError`s.
 
 Same semantics as `remove_cache()`, but targets `runtime_dir`. Useful at
 shutdown for stale sockets and pid files.
+
+#### `find_file(name: str, kind: str = "config") -> Path | None`
+
+Search the user dir first, then the system dirs, for a file named `name`.
+Returns the first matching `Path`, or `None` if no match exists.
+
+- `kind="config"` searches `[config_dir, *config_dirs]`.
+- `kind="data"` searches `[data_dir, *data_dirs]`.
+- Any other `kind` raises `ValueError`.
+
+Matches use `Path.exists()`, so files, dirs, and symlinks (to existing
+targets) all count. Use this to implement "user override, system
+default" lookups for shared resources (themes, schemas, fixtures).
 
 ### Convenience file-path helpers
 
@@ -138,6 +153,17 @@ namespace (rare — `App` is usually what you want).
 `uid` is required — there is no implicit `os.getuid()` here. Callers
 that want the real uid pass `os.getuid()` explicitly.
 
+### `data_dirs(env: Mapping[str, str]) -> list[Path]`
+
+Colon-separated paths from `env["XDG_DATA_DIRS"]`, else the spec
+fallback `/usr/local/share:/usr/share`. Empty or unset env var falls
+back. Empty entries inside a non-empty list are skipped.
+
+### `config_dirs(env: Mapping[str, str]) -> list[Path]`
+
+Same shape as `data_dirs`, for `env["XDG_CONFIG_DIRS"]`. Fallback:
+`/etc/xdg`.
+
 ---
 
 ## XDG fallback table
@@ -149,6 +175,8 @@ that want the real uid pass `os.getuid()` explicitly.
 | `data_home` | `XDG_DATA_HOME` | `~/.local/share` |
 | `state_home` | `XDG_STATE_HOME` | `~/.local/state` |
 | `runtime_dir` | `XDG_RUNTIME_DIR` | `/run/user/<uid>` |
+| `data_dirs` | `XDG_DATA_DIRS` | `/usr/local/share:/usr/share` |
+| `config_dirs` | `XDG_CONFIG_DIRS` | `/etc/xdg` |
 
 An "unset" var means either missing from `env` **or** present as an
 empty string — both fall back. `Path.home()` is used for the `~`

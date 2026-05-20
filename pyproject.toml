@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codechu-xdg"
-version = "0.2.0"
+version = "0.3.0"
 description = "Vendor-namespaced XDG Base Directory paths for Linux desktop apps."
 readme = "README.md"
 license = { file = "LICENSE" }

@@ -37,7 +37,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __all__ = [
     "App",
     "config_home",
@@ -45,6 +45,8 @@ __all__ = [
     "data_home",
     "state_home",
     "runtime_dir",
+    "data_dirs",
+    "config_dirs",
     "default_env",
 ]
 
@@ -106,6 +108,34 @@ def runtime_dir(env: Mapping[str, str], uid: int) -> Path:
     return Path(f"/run/user/{uid}")
 
 
+def _xdg_dirs(env: Mapping[str, str], var: str, default: str) -> list[Path]:
+    """Read colon-separated XDG dirs list from ``env``, fall back to ``default``.
+
+    Empty / unset env vars fall back to the spec default. Empty entries within
+    a non-empty list are skipped.
+    """
+    value = env.get(var)
+    if not value:
+        value = default
+    return [Path(p) for p in value.split(":") if p]
+
+
+def data_dirs(env: Mapping[str, str]) -> list[Path]:
+    """``$XDG_DATA_DIRS`` from ``env`` or ``/usr/local/share:/usr/share``.
+
+    Returns the list of system data dirs (read-only, search across them).
+    """
+    return _xdg_dirs(env, "XDG_DATA_DIRS", "/usr/local/share:/usr/share")
+
+
+def config_dirs(env: Mapping[str, str]) -> list[Path]:
+    """``$XDG_CONFIG_DIRS`` from ``env`` or ``/etc/xdg``.
+
+    Returns the list of system config dirs (read-only, search across them).
+    """
+    return _xdg_dirs(env, "XDG_CONFIG_DIRS", "/etc/xdg")
+
+
 @dataclass(frozen=True)
 class App:
     """Vendor-namespaced application paths.
@@ -155,6 +185,42 @@ class App:
     def runtime_dir(self) -> Path:
         """``$XDG_RUNTIME_DIR/<vendor>/<product>`` — sockets, pid files, locks."""
         return runtime_dir(self.env, self.uid) / self.vendor / self.product
+
+    @property
+    def data_dirs(self) -> list[Path]:
+        """``[<base>/<vendor>/<product> for base in XDG_DATA_DIRS]`` — system data dirs.
+
+        Read-only; caller searches across them (see :meth:`find_file`).
+        """
+        return [base / self.vendor / self.product for base in data_dirs(self.env)]
+
+    @property
+    def config_dirs(self) -> list[Path]:
+        """``[<base>/<vendor>/<product> for base in XDG_CONFIG_DIRS]`` — system config dirs.
+
+        Read-only; caller searches across them (see :meth:`find_file`).
+        """
+        return [base / self.vendor / self.product for base in config_dirs(self.env)]
+
+    def find_file(self, name: str, kind: str = "config") -> Path | None:
+        """Search user dir first, then system dirs, for ``name``. Return first hit or ``None``.
+
+        ``kind="config"`` searches ``[config_dir, *config_dirs]``.
+        ``kind="data"`` searches ``[data_dir, *data_dirs]``.
+
+        Raises ``ValueError`` for any other ``kind``.
+        """
+        if kind == "config":
+            search = [self.config_dir, *self.config_dirs]
+        elif kind == "data":
+            search = [self.data_dir, *self.data_dirs]
+        else:
+            raise ValueError(f"invalid kind: {kind!r} (expected 'config' or 'data')")
+        for base in search:
+            candidate = base / name
+            if candidate.exists():
+                return candidate
+        return None
 
     def ensure(self) -> None:
         """Create all five directories if missing (mkdir -p semantics)."""

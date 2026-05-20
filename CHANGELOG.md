@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-05-20
+
+### Added
+- `data_dirs(env)` and `config_dirs(env)` module-level accessors for
+  `XDG_DATA_DIRS` (fallback `/usr/local/share:/usr/share`) and
+  `XDG_CONFIG_DIRS` (fallback `/etc/xdg`). Empty or unset env vars
+  fall back to the spec defaults.
+- `App.data_dirs` / `App.config_dirs` properties — vendor-namespaced
+  list of system dirs (`<base>/<vendor>/<product>/`).
+- `App.find_file(name, kind="config")` — searches user dir first,
+  then system dirs, returning the first existing `Path` or `None`.
+  `kind="config"` searches config dirs, `kind="data"` searches data
+  dirs.
+
 ## [0.2.0] — 2026-05-20
 
 ### Changed

@@ -1,6 +1,6 @@
-# Recipes — codechu-xdg 0.2.0
+# Recipes — codechu-xdg 0.3.0
 
-Five common patterns. Copy-paste, adapt vendor / product slugs.
+Seven common patterns. Copy-paste, adapt vendor / product slugs.
 
 ---
 
@@ -224,3 +224,85 @@ app.ensure()          # re-create the (now empty) runtime dir
 `remove_runtime()` is best-effort — individual `OSError`s are
 swallowed, so a leftover socket held by another process will not
 crash your cleanup.
+
+---
+
+## 6. Read user config with system fallback (`find_file`)
+
+The classic "user override, packaged default" pattern. Ship your
+default config under `/usr/share/codechu/disk-cleaner/settings.toml`,
+let users drop their own copy at `~/.config/codechu/disk-cleaner/`,
+and resolve the right one with one call.
+
+```python
+from codechu_xdg import App, default_env
+
+app = App("codechu", "disk-cleaner", env=default_env())
+
+path = app.find_file("settings.toml", kind="config")
+if path is None:
+    raise SystemExit("settings.toml not found (no user copy, no packaged default)")
+
+print(f"loading config from {path}")
+text = path.read_text()
+```
+
+Search order is `[app.config_dir, *app.config_dirs]` — i.e. the user's
+`~/.config/codechu/disk-cleaner/` wins, then each `$XDG_CONFIG_DIRS`
+entry (default `/etc/xdg/codechu/disk-cleaner/`) is tried in order.
+
+For first-run bootstrap (copy the system default to the user dir on
+first launch):
+
+```python
+user = app.config_dir / "settings.toml"
+if not user.exists():
+    packaged = app.find_file("settings.toml", kind="config")
+    if packaged is not None:
+        app.ensure()
+        user.write_text(packaged.read_text())
+```
+
+Returns `None` cleanly when nothing matches — wrap in your own
+"not configured" error if absence is fatal for your app.
+
+---
+
+## 7. Search across `XDG_DATA_DIRS` for a shared resource
+
+Themes, icon sets, schemas, plugin manifests — anything a sysadmin
+might install system-wide that the user can override. Pass
+`kind="data"` to search the data dirs instead of config dirs.
+
+```python
+from codechu_xdg import App, default_env
+
+app = App("codechu", "disk-cleaner", env=default_env())
+
+theme = app.find_file("themes/dark.css", kind="data")
+if theme is not None:
+    inject_stylesheet(theme.read_text())
+```
+
+`find_file` accepts a relative subpath in `name` (it is joined with
+`Path.__truediv__`), so `"themes/dark.css"` finds either
+`~/.local/share/codechu/disk-cleaner/themes/dark.css` or
+`/usr/share/codechu/disk-cleaner/themes/dark.css`, whichever exists
+first.
+
+To iterate every match (not just the first) — e.g. when collecting
+plugin manifests from every installed location — bypass `find_file`
+and walk the namespaced dir list directly:
+
+```python
+manifests = []
+for base in [app.data_dir, *app.data_dirs]:
+    plugins = base / "plugins"
+    if plugins.is_dir():
+        manifests.extend(plugins.glob("*.toml"))
+```
+
+The vendor namespace is applied for you on `app.data_dirs`, so each
+`base` already ends in `/codechu/disk-cleaner/`. If you need the raw
+system bases (no namespace) for a cross-vendor lookup, call the
+module-level `data_dirs(env)` instead.
