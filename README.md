@@ -1,3 +1,14 @@
+```text
+   ~/  codechu-xdg
+   ├── .config/    <vendor>/<product>/   settings live here
+   ├── .cache/     <vendor>/<product>/   throwaway, regenerable
+   ├── .local/share/  <vendor>/<product>/   user data, keep it
+   ├── .local/state/  <vendor>/<product>/   logs, history
+   └── $XDG_RUNTIME_DIR/<vendor>/<product>/  sockets, pids
+```
+
+> *Vendor-namespaced XDG Base Directory paths — five dirs, one rule.*
+
 # codechu-xdg
 
 Vendor-namespaced [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/)
