@@ -1,10 +1,17 @@
 ```text
-   ~/  codechu-xdg
-   ├── .config/    <vendor>/<product>/   settings live here
-   ├── .cache/     <vendor>/<product>/   throwaway, regenerable
-   ├── .local/share/  <vendor>/<product>/   user data, keep it
-   ├── .local/state/  <vendor>/<product>/   logs, history
-   └── $XDG_RUNTIME_DIR/<vendor>/<product>/  sockets, pids
+━━━━━━━━━━━━━ c o d e c h u  ·  x d g ━━━━━━━━━━━━━━━
+
+   ~/.config/codechu/                ← every Codechu product
+   ├── disk-cleaner/  settings.json
+   ├── ascii-painter/ settings.json
+   └── snap-monitor/  settings.json
+
+   ~/.cache/codechu/...              ← throwaway, regenerable
+   ~/.local/share/codechu/...        ← user data, keep it
+   ~/.local/state/codechu/...        ← logs, history
+   $XDG_RUNTIME_DIR/codechu/...      ← sockets, pids
+
+━━━━━━━━━━ five dirs. one vendor namespace. ━━━━━━━━━
 ```
 
 [![PyPI](https://img.shields.io/pypi/v/codechu-xdg.svg)](https://pypi.org/project/codechu-xdg/)
@@ -22,18 +29,6 @@ paths for Linux desktop apps. Every path lives at
 `$XDG_BASE/<vendor>/<product>/` — multiple products from one
 publisher share a tidy directory tree, and any user can find or
 clean *all* your products at once.
-
-```text
-~/.config/codechu/                ← every Codechu product
-├── disk-cleaner/  settings.json
-├── ascii-painter/ settings.json
-└── snap-monitor/  settings.json
-
-~/.cache/codechu/disk-cleaner/    ← regenerable
-~/.local/share/codechu/...        ← user data
-~/.local/state/codechu/...        ← logs, history
-$XDG_RUNTIME_DIR/codechu/...      ← sockets, pids
-```
 
 ## Install
 
