@@ -122,8 +122,18 @@ Standard XDG environment variables:
 | state | `XDG_STATE_HOME` | `~/.local/state` |
 | runtime | `XDG_RUNTIME_DIR` | `/run/user/$UID` |
 
-Honored at module import time. Re-import / reload for env changes
-during tests.
+Resolved per-call from the `env` mapping you pass to `App` (or to the
+base accessors). No ambient reads, no import-time snapshots — tests
+pass a plain `dict` and get full isolation. See
+[`docs/MIGRATION.md`](docs/MIGRATION.md) if you are upgrading from v0.1.
+
+## Documentation
+
+- [`docs/API.md`](docs/API.md) — full API reference
+- [`docs/MIGRATION.md`](docs/MIGRATION.md) — v0.1 → v0.2 upgrade guide
+- [`docs/RECIPES.md`](docs/RECIPES.md) — common patterns (testing,
+  legacy migration, multi-user runtime dirs, vendor-namespacing
+  rationale)
 
 ## Validation
 
