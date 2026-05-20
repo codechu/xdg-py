@@ -4,11 +4,17 @@ Standard XDG Base Directory Spec (https://specifications.freedesktop.org/basedir
 with a mandatory vendor + product namespace, so multiple products from the
 same publisher live under one directory.
 
+**Explicit-config rule:** This library never reads ambient state on its own.
+Every function and ``App`` instance takes an explicit ``env`` mapping (and,
+for ``runtime_dir``, an explicit ``uid``). Callers pass ``default_env()`` /
+``os.getuid()`` when they want the real environment; tests pass a plain
+``dict`` and get full isolation without monkeypatching.
+
 Example::
 
-    from codechu_xdg import App
+    from codechu_xdg import App, default_env
 
-    app = App(vendor="codechu", product="disk-cleaner")
+    app = App(vendor="codechu", product="disk-cleaner", env=default_env())
     app.ensure()
 
     settings_path = app.config_dir / "settings.json"
@@ -21,16 +27,14 @@ Migration::
     moved = app.migrate({
         Path.home() / ".config" / "disk_cleaner" / "settings.json":
             app.config_dir / "settings.json",
-        Path.home() / ".config" / "disk_cleaner" / "du_cache.db":
-            app.cache_dir / "du_cache.db",
     })
-    print(f"migrated {moved} files")
 """
 
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from pathlib import Path
 
 __version__ = "0.2.0"
@@ -41,71 +45,65 @@ __all__ = [
     "data_home",
     "state_home",
     "runtime_dir",
-    "XDG_CONFIG_HOME",
-    "XDG_CACHE_HOME",
-    "XDG_DATA_HOME",
-    "XDG_RUNTIME_DIR",
-    "XDG_STATE_HOME",
+    "default_env",
 ]
 
 
-def _xdg(env: str, default: str) -> Path:
-    """Read an XDG env var, fall back to ``~/<default>``."""
-    value = os.environ.get(env)
+def default_env() -> Mapping[str, str]:
+    """Return a snapshot of ``os.environ`` as a plain ``dict``.
+
+    Use this when you want the real environment::
+
+        app = App("acme", "widget", env=default_env())
+
+    Tests should construct a ``dict`` directly instead.
+    """
+    return dict(os.environ)
+
+
+def _xdg(env: Mapping[str, str], var: str, default: str) -> Path:
+    """Read XDG var from ``env``, fall back to ``~/<default>``."""
+    value = env.get(var)
     if value:
         return Path(value)
     return Path.home() / default
 
 
-# ── Lazy XDG base accessors ─────────────────────────────────────────
+# ── Pure XDG base accessors ─────────────────────────────────────────
 #
-# These read the environment on every call, so tests can monkeypatch
-# env vars after import without reloading the module.
+# All take an explicit ``env`` mapping. No ambient reads.
 
 
-def config_home() -> Path:
-    """``$XDG_CONFIG_HOME`` or ``~/.config``."""
-    return _xdg("XDG_CONFIG_HOME", ".config")
+def config_home(env: Mapping[str, str]) -> Path:
+    """``$XDG_CONFIG_HOME`` from ``env`` or ``~/.config``."""
+    return _xdg(env, "XDG_CONFIG_HOME", ".config")
 
 
-def cache_home() -> Path:
-    """``$XDG_CACHE_HOME`` or ``~/.cache``."""
-    return _xdg("XDG_CACHE_HOME", ".cache")
+def cache_home(env: Mapping[str, str]) -> Path:
+    """``$XDG_CACHE_HOME`` from ``env`` or ``~/.cache``."""
+    return _xdg(env, "XDG_CACHE_HOME", ".cache")
 
 
-def data_home() -> Path:
-    """``$XDG_DATA_HOME`` or ``~/.local/share``."""
-    return _xdg("XDG_DATA_HOME", ".local/share")
+def data_home(env: Mapping[str, str]) -> Path:
+    """``$XDG_DATA_HOME`` from ``env`` or ``~/.local/share``."""
+    return _xdg(env, "XDG_DATA_HOME", ".local/share")
 
 
-def state_home() -> Path:
-    """``$XDG_STATE_HOME`` or ``~/.local/state``."""
-    return _xdg("XDG_STATE_HOME", ".local/state")
+def state_home(env: Mapping[str, str]) -> Path:
+    """``$XDG_STATE_HOME`` from ``env`` or ``~/.local/state``."""
+    return _xdg(env, "XDG_STATE_HOME", ".local/state")
 
 
-def runtime_dir() -> Path:
-    """``$XDG_RUNTIME_DIR`` or ``/run/user/<uid>``.
+def runtime_dir(env: Mapping[str, str], uid: int) -> Path:
+    """``$XDG_RUNTIME_DIR`` from ``env`` or ``/run/user/<uid>``.
 
-    Reads env + ``os.getuid()`` on every call (not at import time), so
-    tests can monkeypatch ``XDG_RUNTIME_DIR`` freely.
+    ``uid`` is required (no implicit ``os.getuid()``). Callers that
+    want the real uid should pass ``os.getuid()`` explicitly.
     """
-    env = os.environ.get("XDG_RUNTIME_DIR")
-    if env:
-        return Path(env)
-    return Path(f"/run/user/{os.getuid()}")
-
-
-# ── Module-level constants (backwards compatibility) ────────────────
-#
-# Snapshots captured at import time. Prefer the accessor functions
-# above (or the ``App`` properties) for code that needs to see env
-# changes without a module reload.
-
-XDG_CONFIG_HOME: Path = config_home()
-XDG_CACHE_HOME: Path = cache_home()
-XDG_DATA_HOME: Path = data_home()
-XDG_STATE_HOME: Path = state_home()
-XDG_RUNTIME_DIR: Path = runtime_dir()
+    value = env.get("XDG_RUNTIME_DIR")
+    if value:
+        return Path(value)
+    return Path(f"/run/user/{uid}")
 
 
 @dataclass(frozen=True)
@@ -114,18 +112,18 @@ class App:
 
     ``vendor`` is the publisher / organization slug (e.g. ``"codechu"``).
     ``product`` is the product slug (e.g. ``"disk-cleaner"``).
-
-    Both are namespace components — they appear in every directory path
-    so multiple products from the same vendor live together under one
-    directory (``~/.config/<vendor>/`` shows them all).
-
-    All path properties resolve lazily: they read the XDG environment
-    variables on each access, so tests can monkeypatch env vars freely
-    without reloading the module.
+    ``env`` is the environment mapping used to resolve XDG vars. Pass
+    :func:`default_env` for the real environment, or a plain ``dict``
+    in tests.
+    ``uid`` is the user id used for the ``runtime_dir`` fallback when
+    ``XDG_RUNTIME_DIR`` is unset. Defaults to ``os.getuid()`` resolved
+    once at construction time (no later ambient reads).
     """
 
     vendor: str
     product: str
+    env: Mapping[str, str] = field(default_factory=dict)
+    uid: int = field(default_factory=os.getuid)
 
     def __post_init__(self) -> None:
         if not self.vendor or "/" in self.vendor:
@@ -136,27 +134,27 @@ class App:
     @property
     def config_dir(self) -> Path:
         """``$XDG_CONFIG_HOME/<vendor>/<product>``."""
-        return config_home() / self.vendor / self.product
+        return config_home(self.env) / self.vendor / self.product
 
     @property
     def cache_dir(self) -> Path:
         """``$XDG_CACHE_HOME/<vendor>/<product>`` — regeneratable."""
-        return cache_home() / self.vendor / self.product
+        return cache_home(self.env) / self.vendor / self.product
 
     @property
     def data_dir(self) -> Path:
         """``$XDG_DATA_HOME/<vendor>/<product>`` — persistent user data."""
-        return data_home() / self.vendor / self.product
+        return data_home(self.env) / self.vendor / self.product
 
     @property
     def state_dir(self) -> Path:
         """``$XDG_STATE_HOME/<vendor>/<product>`` — log files, history, recovery."""
-        return state_home() / self.vendor / self.product
+        return state_home(self.env) / self.vendor / self.product
 
     @property
     def runtime_dir(self) -> Path:
         """``$XDG_RUNTIME_DIR/<vendor>/<product>`` — sockets, pid files, locks."""
-        return runtime_dir() / self.vendor / self.product
+        return runtime_dir(self.env, self.uid) / self.vendor / self.product
 
     def ensure(self) -> None:
         """Create all five directories if missing (mkdir -p semantics)."""
